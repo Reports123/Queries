@@ -1,0 +1,46 @@
+---hospitilisation greater than 24 hrs for AK and NP 
+
+SELECT level_2_branch as ro_code, level_2_name as ro_name, location,
+        concat(claim_number,':') as claim_number, policy_number, 
+        sum(a.atd_debit_amount - a.atd_credit_amount) as paid_amount,
+        acc_department_code, product_code,product_name, status,pd.sum_insured,
+        intimation_date, registration_date, loss_date, 
+        policy_inception_date, policy_expiry_date,  
+        estimated_amount, status, dev_officer_code,
+        c.branch as claim_processing_branch,
+        replace(replace(replace(policy_holder_name, chr(10), ''), chr(13), ''), chr(9), '') as policy_holder_name,
+        replace(replace(replace(dev_officer_name, chr(10), ''), chr(13), ''), chr(9), '') as dev_officer_name,
+        ts.party_code as tpa_code,
+        ts.tpa_name ,hospital_cash,critical_illness,date_of_admission_dup,date_of_discharge,
+        CAST(date_of_discharge AS DATE)-TRUNC(date_of_admission_dup)AS  No_Of_Days 
+  FROM   basic_claim_rep_new a,
+         branch_details_prd_tab bd, branch_hierarchy bh, claim c, product p,
+         policy_detail_prd_decomp pd, stakeholder_rltn_view_decomp st,
+         tpa_stake ts,
+           (SELECT rc.claim_id,rc.hospital_cash,rc.critical_illness,rc.date_of_admission_dup,rc.date_of_discharge
+           FROM ods.CLAIM_RISK_PROPERTY_HEALTH rc
+                      WHERE rc.claim_risk_property_id = (SELECT MAX(claim_risk_property_id) FROM ods.CLAIM_RISK_PROPERTY_HEALTH rc1
+                         WHERE rc1.claim_id=rc.claim_id
+                         --AND rc.claim_id = 33538033705062012
+                         )) rc
+  WHERE a.branch_code = bd.branch_code
+    and bd.location = bh.branch_id
+    and a.claim_id = c.claim_id
+    and c.product_id = p.product_id 
+    and c.policy_id = pd.policy_id
+    and c.policy_id = st.policy_id
+    AND ts.party_id(+)=st.tpa_id
+    AND rc.claim_id=a.claim_id(+)
+    AND p.product_code IN ('NP','AK')
+    AND A.ACC_ACCOUNT_TYPE = '1301'
+   ----AND LEVEL_2_BRANCH = '170000'
+    and a.atn_transaction_date between '01-apr-2016' and '30-apr-2016'
+  GROUP BY level_2_branch, level_2_name, location, claim_number, 
+           policy_number, acc_department_code, product_code,
+           intimation_date, registration_date, loss_date, 
+           policy_inception_date, policy_expiry_date, status, 
+           estimated_amount, status, dev_officer_code,product_name,
+           c.branch, policy_holder_name, dev_officer_name,
+            ts.party_code ,ts.tpa_name ,pd.sum_insured,hospital_cash,critical_illness,date_of_admission_dup,date_of_discharge
+  HAVING SUM(A.ATD_DEBIT_AMOUNT - A.ATD_CREDIT_AMOUNT) <> 0
+  AND CAST(date_of_discharge AS DATE)-TRUNC(date_of_admission_dup)>1
