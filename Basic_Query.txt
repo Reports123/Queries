@@ -1,0 +1,320 @@
+select sum(bp.atd_credit_amount-bp.atd_debit_amount)
+from basic_premium_rep bp,product pp,branch_hierarchy bh,branch_details_prd_tab bd
+where  bp.product_id=pp.product_id
+and bd.location=bh.branch_id
+and bd.branch_code=bp.branch_code
+and bh.level_2_branch='150000'
+AND pp.product_code IN ('GM','TF','TG')
+AND bp.atn_transaction_date BETWEEN '01-Sep-2013' AND '31-Aug-2014'
+***************************************POLICY************************************
+
+SELECT * FROM POLICY
+WHERE POLICY_NUMBER LIKE '120700341204000000%'
+
+SELECT SUM(ATD_CREDIT_AMOUNT - ATD_DEBIT_AMOUNT) FROM 
+     BASIC_PREMIUM_REP AT, POLICY P, PRODUCT PD
+    WHERE AT.POLICY_ID = P.POLICY_ID
+      AND AT.PRODUCT_ID = PD.PRODUCT_ID 
+      AND AT.POLICY_ID = '1015317502314042012'
+      AND ACC_ACCOUNT_TYPE = '1101'
+      AND ACC_DEPARTMENT_CODE = '11'
+      AND ATN_TRANSACTION_DATE BETWEEN '01-DEC-2012' AND '31-DEC-2012'
+
+
+**************************************CLAIM**************************************
+
+SELECT * FROM CLAIM
+WHERE CLAIM_NUMBER LIKE '13020031070198000418001%'
+WHERE CLAIM_ID = '3135854706082008'
+
+SELECT SUM(CASE WHEN BC.ACC_ACCOUNT_TYPE = '5383' AND BC.ATN_TRANSACTION_DATE < '01-APR-2012' 
+                THEN BC.ATD_CREDIT_AMOUNT - BC.ATD_DEBIT_AMOUNT ELSE 0 END) AS CLAIM_OS_AT_BEGIN,
+       SUM(CASE WHEN BC.ACC_ACCOUNT_TYPE = '5383' AND BC.ATN_TRANSACTION_DATE <= '31-MAR-2013'
+                THEN BC.ATD_CREDIT_AMOUNT - BC.ATD_DEBIT_AMOUNT ELSE 0 END) AS CLAIM_OS_AT_END,
+       SUM(CASE WHEN BC.ACC_ACCOUNT_TYPE = '5383'  AND TRUNC(C.REGISTRATION_DATE) BETWEEN '01-APR-2012' AND '31-MAR-2013'
+                THEN BC.ATD_CREDIT_AMOUNT - BC.ATD_DEBIT_AMOUNT ELSE 0 END) AS CLAIM_INTIMATED,
+       SUM(CASE WHEN BC.ACC_ACCOUNT_TYPE = '1301' AND BC.ATN_TRANSACTION_DATE BETWEEN '01-APR-2012' AND '31-MAR-2013'
+                THEN BC.ATD_DEBIT_AMOUNT - BC.ATD_CREDIT_AMOUNT ELSE 0 END) AS CLAIM_SETTLED
+   FROM BASIC_CLAIM_REP_NEW BC, CLAIM C
+  WHERE BC.CLAIM_ID = C.CLAIM_ID
+    AND BC.ACC_ACCOUNT_TYPE IN ('5383','1301')
+    AND BC.CLAIM_ID = '3135854706082008'
+    AND CLAIM_NUMBER = ''
+    AND BC.ATN_TRANSACTION_DATE <= '31-MAR-2013'
+    AND BC.ACC_DEPARTMENT_CODE IN ('32','38','39','33')
+
+***********************************ACCOUNT*****************************************
+
+SELECT substr(AT.atn_voucher_number,1,2)||'0000' AS RO_CODE,
+       SUM(ATD.Atd_Credit_Amount - ATD.Atd_Debit_Amount) AS PREMIUM
+  FROM ACCOUNTING_TRANSACTION AT,
+       ACCOUNTING_TRN_DETAIL  ATD,
+       ACCOUNT                AA,
+       ACCOUNT                BB
+ WHERE AT.Atn_Transaction_Date <= '27-Mar-2013'
+   AND AT.ATN_ACCOUNTING_TRANSACTION_ID = ATD.ATN_ACCOUNTING_TRANSACTION_ID
+   AND ATD.ACC_ACCOUNT_ID = AA.ACC_ACCOUNT_ID
+   AND AA.ACC_ACC_ACCOUNT_ID = BB.ACC_ACCOUNT_ID
+   AND BB.ACC_ACCOUNT_TYPE = '5081'
+ GROUP BY substr(AT.atn_voucher_number,1,2)||'0000'
+
+call sapurgeallcache()
+
+Premium Register
+
+select sum(atd.ATD_CREDIT_AMOUNT -  atd.ATD_DEBIT_AMOUNT) amounts
+,substr(at.atn_voucher_number,1,6)
+from accounting_transaction at
+,accounting_trn_detail atd
+,account aa   --Child
+,account bb   --Parent
+where at.ATN_ACCOUNTING_TRANSACTION_ID = atd.ATN_ACCOUNTING_TRANSACTION_ID
+and atd.ACC_ACCOUNT_ID = aa.ACC_ACCOUNT_ID
+and aa.ACC_ACC_ACCOUNT_ID = bb.ACC_ACCOUNT_ID
+and bb.ACC_ACCOUNT_TYPE in ('1101')
+and at.atn_voucher_number like '130200%'
+and trunc(at.atn_transaction_date) between '1-AUG-2008' and '30-NOV-2008'
+group by substr(at.atn_voucher_number,1,6)
+
+
+Claim OS Register
+
+select sum(atd.ATD_CREDIT_AMOUNT -  atd.ATD_DEBIT_AMOUNT) amounts
+,substr(at.atn_voucher_number,1,6)
+from accounting_transaction at
+,accounting_trn_detail atd
+,account aa   --Child
+,account bb   --Parent
+where at.ATN_ACCOUNTING_TRANSACTION_ID = atd.ATN_ACCOUNTING_TRANSACTION_ID
+and atd.ACC_ACCOUNT_ID = aa.ACC_ACCOUNT_ID
+and aa.ACC_ACC_ACCOUNT_ID = bb.ACC_ACCOUNT_ID
+and bb.ACC_ACCOUNT_TYPE in ('5383')
+and at.atn_voucher_number like '130200%'
+and trunc(at.atn_transaction_date) between '1-AUG-2008' and '30-NOV-2008'
+group by substr(at.atn_voucher_number,1,6)
+
+
+
+Claim Paid Register
+
+select sum( atd.ATD_DEBIT_AMOUNT - atd.ATD_CREDIT_AMOUNT ) amounts
+,substr(at.atn_voucher_number,1,6)
+from accounting_transaction at
+,accounting_trn_detail atd
+,account aa   --Child
+,account bb   --Parent
+where at.ATN_ACCOUNTING_TRANSACTION_ID = atd.ATN_ACCOUNTING_TRANSACTION_ID
+and atd.ACC_ACCOUNT_ID = aa.ACC_ACCOUNT_ID
+and aa.ACC_ACC_ACCOUNT_ID = bb.ACC_ACCOUNT_ID
+and bb.ACC_ACCOUNT_TYPE in ('1301')
+and at.atn_voucher_number like '130200%'
+and trunc(at.atn_transaction_date) between '1-AUG-2008' and '30-NOV-2008'
+group by substr(at.atn_voucher_number,1,6)
+
+
+
+Agent Bill
+
+select sum(atd.ATD_DEBIT_AMOUNT -  atd.ATD_CREDIT_AMOUNT) amounts
+,substr(at.atn_voucher_number,1,6)
+from accounting_transaction at
+,accounting_trn_detail atd
+,account aa   --Child
+,account bb   --Parent
+where at.ATN_ACCOUNTING_TRANSACTION_ID = atd.ATN_ACCOUNTING_TRANSACTION_ID
+and atd.ACC_ACCOUNT_ID = aa.ACC_ACCOUNT_ID
+and aa.ACC_ACC_ACCOUNT_ID = bb.ACC_ACCOUNT_ID
+and bb.ACC_ACCOUNT_TYPE in ('1201','1202','1203')
+and at.atn_voucher_number like '130200%'
+and trunc(at.atn_transaction_date) between '1-AUG-2008' and '30-NOV-2008'
+group by substr(at.atn_voucher_number,1,6)
+
+
+APD Statement
+
+select sum(atd.ATD_CREDIT_AMOUNT -  atd.ATD_DEBIT_AMOUNT) amounts
+,substr(at.atn_voucher_number,1,6)
+from accounting_transaction at
+,accounting_trn_detail atd
+,account aa   --Child
+,account bb   --Parent
+where at.ATN_ACCOUNTING_TRANSACTION_ID = atd.ATN_ACCOUNTING_TRANSACTION_ID
+and atd.ACC_ACCOUNT_ID = aa.ACC_ACCOUNT_ID
+and aa.ACC_ACC_ACCOUNT_ID = bb.ACC_ACCOUNT_ID
+and aa.ACC_ACCOUNT_TYPE = ('APD')
+and at.atn_voucher_number like '130200%'
+and trunc(at.atn_transaction_date) between '1-AUG-2008' and '30-NOV-2008'
+group by substr(at.atn_voucher_number,1,6)
+
+
+--Year Dropdown
+SELECT REP_BS_PRODUCTIVITY_DATA."YEAR" FROM ACCOUNTS where REP_BS_PRODUCTIVITY_DATA."CAL_YEAR"  between 2011 and EXTRACT( YEAR FROM current_date)
+
+--Basic Channel Bifurcation
+
+CASE WHEN S.AGENT_PARTY_ID IS NOT NULL 
+                   AND PR.PARTY_TYPE = 'I' THEN 'INDIVIDUAL AGENT'
+                WHEN S.AGENT_PARTY_ID IS NOT NULL 
+                   AND PR.PARTY_TYPE = 'O' THEN 'CORPORATE AGENT' 
+                WHEN PR.PARTY_CODE LIKE 'MI%' THEN 'MICRO AGENTS'
+                WHEN S.BROKER_ID IS NOT NULL THEN 'BROKER' 
+                WHEN S.BANCASSURANCE_ID IS NOT NULL THEN 'BANCASSURANCE'
+                WHEN S.TPA_ID IS NOT NULL THEN 'TPA'
+                WHEN S.DEV_OFFICER_NAME NOT LIKE '%DIRECT%' THEN 'DEV OFFICER'
+              ELSE 'DIRECT' END
+FROM ODS.BASIC_PREMIUM_REP_NEW AT, BRANCH_DETAILS_PRD_TAB BD,
+             ODS.STAKEHOLDER_RLTN_VIEW_DECOMP S, PARTY PR
+       WHERE AT.BRANCH_CODE = BD.BRANCH_CODE
+         AND AT.POLICY_ID = S.POLICY_ID
+         AND S.AGENT_PARTY_ID = PR.PARTY_ID(+)
+
+Office Code Prompt
+
+SELECT "Branch_Voucher_No"."Regional Office" FROM "ACCOUNTS"  WHERE ("Branch_Voucher_No"."Head Office"= valueof(NQ_SESSION.Office_Code)    
+  OR "Branch_Voucher_No"."Regional Office" = valueof(NQ_SESSION.Office_Code) 
+OR "Branch_Voucher_No"."Divisional Office" = valueof(NQ_SESSION.Office_Code) 
+OR "Branch_Voucher_No"."Branch Office" = valueof(NQ_SESSION.Office_Code))  
+AND "Branch_Voucher_No"."Regional Office" IS NOT NULL  AND "Branch_Voucher_No"."Regional Office" NOT IN ('NI0000','100000')  ORDER BY 1
+
+
+Mail for No Results
+Dear Sir,
+
+Please note that we are able to generate the said report from our end.
+
+Hence, request you to revert with a screenshot of the error message, so that we can help you better and you won't face the same problem in near future.
+
+Revert for clarification, if any..
+
+Regards,
+Nazim
+
+Dear Sir,
+
+Please note that the same can be generated from report named Portal Performance under Commission Dashboard.
+
+Hence, request you to generate it from your end..
+
+Revert for clarification, if any..
+
+Regards,
+
+
+
+-----------------------------------------------------------------
+Note: We have raised Ticket (113345) for your data delivered.
+Henceforth Please Raise Ticket for all your requirements and data.
+
+
+REPLACE(REPLACE(REPLACE(AGENT_NAME, CHR(10), ''), CHR(13), ''), CHR(9), '') AGENT_NAME,
+
+
+ (SELECT POLICY_ID, CONSURANCE_TYPE, LEADER_INDICATOR, 
+              SUM(SHARE_VALUE_PCT) AS PERCENT_SHARE 
+         FROM COINSURANCE_DETAILS WHERE COINSURER_COMPANY_NAME LIKE 'NEW INDIA%'
+      GROUP BY POLICY_ID, CONSURANCE_TYPE, LEADER_INDICATOR) CD
+
+
+
+
+
+  (SELECT * FROM 
+              (SELECT CF.*,ROW_NUMBER() OVER (PARTITION BY CF.claim_id 
+                            ORDER BY CF.claim_party_id DESC) SEQ
+                 FROM ODS.CLAIM_PARTY CF
+                 WHERE cf.stake_holder_id='14035514032006')
+                  WHERE SEQ = 1) cp
+
+
+SELECT c.claim_number,bc.acc_department_code,SUM(bc.atd_debit_amount-bc.atd_credit_amount) AS Claim_Paid
+FROM basic_claim_rep_new bc,claim c
+WHERE bc.claim_id=c.claim_id
+AND bc.acc_account_type='1301'
+AND bc.acc_department_code='33'
+AND bc.atn_transaction_date BETWEEN '21-Jan-2015' AND '28-Feb-2015'
+GROUP BY  c.claim_number,bc.acc_department_code
+
+-----------------------------
+
+No of users link ..
+
+http://10.90.33.110:9704/analytics/saw.dll?perfmon
+http://10.90.33.130:9704/analytics/saw.dll?perfmon
+http://10.90.33.111:9704/analytics/saw.dll?perfmon
+
+
+
+--resrve amt 
+SELECT c.claim_number,C.CLAIM_ID,bc.acc_department_code, BC.ATN_VOUCHER_NUMBER, BC.ATN_TRANSACTION_DATE, 
+SUM(BC.ATD_CREDIT_AMOUNT-BC.ATD_DEBIT_AMOUNT)AMT--BC.ATD_CREDIT_AMOUNT, BC.ATD_DEBIT_AMOUNT
+  FROM BASIC_CLAIM_REP_NEW BC, CLAIM C
+WHERE BC.CLAIM_ID = C.CLAIM_ID
+    AND C.CLAIM_NUMBER = '11140021140590000023'
+    AND BC.ACC_ACCOUNT_TYPE = '5383'
+GROUP BY c.claim_number,C.CLAIM_ID,bc.acc_department_code, BC.ATN_VOUCHER_NUMBER, BC.ATN_TRANSACTION_DATE
+
+
+
+SELECT CLAIM_ID, RESERVE_AMOUNT, 
+    PAID_OUT_AMOUNT, RESERVE_TYPE 
+    FROM CLAIM_RESERVE  
+  WHERE CLAIM_ID = (SELECT CLAIM_ID FROM CLAIM WHERE CLAIM_NUMBER = '11140021140590000023')
+
+--------------
+
+http://10.10.3.60:9704/analytics/saw.dll?Logon&NQUser=weblogic&NQPassword=newuser_123&Impersonate=34158
+
+
+
+
+
+pin,city,state....
+
+
+SELECT PC.PIN , CT.CITY_NAME ,  ST.STATE_NAME
+FROM
+ (SELECT * FROM
+     (SELECT PC.PIN , PC.CITY_ID,
+      RANK() OVER (PARTITION BY PC.PIN ORDER BY PC.PIN_CODE_ID DESC) SEQ FROM PIN_CODE PC)
+      WHERE SEQ =1) PC,
+     CITY CT , STATE ST
+   WHERE  PC.CITY_ID = CT.CITY_ID(+)
+  AND CT.STATE_ID = ST.STATE_ID(+)
+  ORDER BY 1 ;
+
+----
+SELECT CASE WHEN CREATED_BY = 'QR_RENEWAL' THEN 'QR_RENEWAL'
+             WHEN CREATED_BY = 'QP_ONLINE' THEN  'QP_ONLINE'
+             WHEN CREATED_BY LIKE 'CUST%' AND CREATED_BY NOT LIKE 'CUSTM%' THEN 'Customer'
+             WHEN CREATED_BY LIKE 'MOBILEUSER%' THEN 'MOBILEUSER' END PORTAL,
+               w.policy_type,
+             SUM(w.upto_lst_mnth_pol_cnt+w.for_mnth_pol_cnt) cnt,
+             SUM(w.upto_lst_mnth_prm+w.for_mnth_prm) prm
+      from weekly_status_report w
+WHERE w.month_num IN (1,2,3,4,5)
+AND portal LIKE 'Customer Portal and Mobile Apps%'
+GROUP BY  w.policy_type,CASE WHEN CREATED_BY = 'QR_RENEWAL' THEN 'QR_RENEWAL'
+             WHEN CREATED_BY = 'QP_ONLINE' THEN  'QP_ONLINE'
+             WHEN CREATED_BY LIKE 'CUST%' AND CREATED_BY NOT LIKE 'CUSTM%' THEN 'Customer'
+             WHEN CREATED_BY LIKE 'MOBILEUSER%' THEN 'MOBILEUSER' END 
+
+
+
+
+-----------------------------------------------------
+
+UPDATE INTERNAL_EMP_WBT_DETAIL A
+SET A.PLANNED_START_DATE = TO_DATE('01-12-2015','DD-MM-YYYY'), 
+    A.PLANNED_END_DATE = TO_DATE('03-12-2015','DD-MM-YYYY'),
+    /*A.ACTUAL_START_DATE = TO_DATE('01-12-2015','DD-MM-YYYY'), 
+    A.ACTUAL_END_DATE = TO_DATE('01-12-2015','DD-MM-YYYY'), */
+    A.STATUS = 'Pending'
+WHERE A.EMP_ID = '736514'
+  AND A.WBT_ID = '32510'
+  
+  SELECT * FROM INTERNAL_EMP_WBT_DETAIL A WHERE A.EMP_ID = '736514' ORDER BY 3
+
+
+
+
+select * from ods_inb_stg.deleted_data
